@@ -2,6 +2,8 @@ package org.william.cex.domain.order.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.Type;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,6 +34,7 @@ public class OrderEvent {
     private EventType eventType;
 
     @Column(columnDefinition = "JSONB")
+    @Type(JsonBinaryType.class)
     private JsonNode details;
 
     @Column(nullable = false, updatable = false)

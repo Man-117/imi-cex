@@ -28,6 +28,8 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
     </properties>
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -79,6 +81,13 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <!-- Hibernate Types for JSON support -->
+        <dependency>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-60</artifactId>
+            <version>3.7.3</version>
+        </dependency>
+
         <!-- Redis -->
         <dependency>
             <groupId>redis.clients</groupId>
@@ -102,6 +111,12 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.12.3</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Jackson for Java 8 date/time support -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
         <!-- Lombok -->
@@ -138,6 +153,15 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

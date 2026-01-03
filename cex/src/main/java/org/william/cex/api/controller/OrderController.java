@@ -10,6 +10,8 @@ import org.william.cex.api.dto.request.CreateOrderRequest;
 import org.william.cex.api.dto.response.OrderResponse;
 import org.william.cex.domain.order.entity.Order;
 import org.william.cex.domain.order.service.OrderService;
+import org.william.cex.domain.user.service.UserService;
+import org.william.cex.infrastructure.security.AuthenticationUtils;
 
 @RestController
 @RequestMapping("/v1/orders")
@@ -19,14 +21,24 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private AuthenticationUtils authenticationUtils;
+
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody CreateOrderRequest request) {
 
         try {
-            Long userId = extractUserIdFromAuth(authHeader);
+            String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+            Long userId = userService.getUserByEmail(userEmail).getId();
             Order.OrderType orderType = Order.OrderType.valueOf(request.getOrderType().toUpperCase());
+
+            log.info("User {} is creating {} order: {} {} -> {} at price {}",
+                    userEmail, orderType, request.getAmount(), request.getBaseCurrency(),
+                    request.getQuoteCurrency(), request.getPrice());
 
             Order order = orderService.createOrder(
                     userId,
@@ -38,28 +50,39 @@ public class OrderController {
             );
 
             OrderResponse response = mapToResponse(order);
+
+            log.info("Order created successfully for user {}: Order ID {} - {} {} at {}",
+                    userEmail, order.getId(), request.getAmount(), request.getBaseCurrency(), request.getPrice());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            log.error("Error creating order", e);
+            log.error("Error creating order for user", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable Long orderId) {
 
         try {
-            Long userId = extractUserIdFromAuth(authHeader);
+            String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+            Long userId = userService.getUserByEmail(userEmail).getId();
+
+            log.info("User {} requested details for order {}", userEmail, orderId);
+
             Order order = orderService.getOrder(orderId);
 
             // Verify ownership
             if (!order.getUserId().equals(userId)) {
+                log.warn("User {} attempted to access order {} which belongs to user {}",
+                        userEmail, orderId, order.getUserId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             OrderResponse response = mapToResponse(order);
+
+            log.info("Order details retrieved for user {}: Order ID {} - {} {} {}",
+                    userEmail, orderId, order.getOrderType(), order.getAmount(), order.getStatus());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting order", e);
@@ -69,19 +92,26 @@ public class OrderController {
 
     @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> cancelOrder(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable Long orderId) {
 
         try {
-            Long userId = extractUserIdFromAuth(authHeader);
+            String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+            Long userId = userService.getUserByEmail(userEmail).getId();
+
+            log.info("User {} is cancelling order {}", userEmail, orderId);
+
             Order order = orderService.getOrder(orderId);
 
             // Verify ownership
             if (!order.getUserId().equals(userId)) {
+                log.warn("User {} attempted to cancel order {} which belongs to user {}",
+                        userEmail, orderId, order.getUserId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             orderService.cancelOrder(orderId);
+
+            log.info("Order cancelled successfully for user {}: Order ID {}", userEmail, orderId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             log.error("Error cancelling order", e);
@@ -103,17 +133,6 @@ public class OrderController {
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();
-    }
-
-    private Long extractUserIdFromAuth(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid or missing Authorization header");
-        }
-        try {
-            return Long.parseLong(authHeader.substring(7));
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid user ID in Authorization header");
-        }
     }
 }
 

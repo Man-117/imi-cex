@@ -1,5 +1,8 @@
 package org.william.cex.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,7 +21,15 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
+
+        // Configure ObjectMapper with JavaTimeModule for LocalDateTime support
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.activateDefaultTyping(
+            LaissezFaireSubTypeValidator.instance,
+            ObjectMapper.DefaultTyping.NON_FINAL
+        );
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         // Key serializers
         template.setKeySerializer(stringSerializer);

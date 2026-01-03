@@ -10,6 +10,7 @@ import org.william.cex.api.dto.request.AddBalanceRequest;
 import org.william.cex.api.dto.response.BalanceResponse;
 import org.william.cex.domain.user.entity.UserWallet;
 import org.william.cex.domain.user.service.UserService;
+import org.william.cex.infrastructure.security.AuthenticationUtils;
 
 @RestController
 @RequestMapping("/v1/balance")
@@ -19,14 +20,18 @@ public class BalanceController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AuthenticationUtils authenticationUtils;
+
     @PostMapping("/add")
     public ResponseEntity<BalanceResponse> addBalance(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody AddBalanceRequest request) {
 
         try {
-            // For demo/imitation environment: extract user ID from header (format: Bearer {userId})
-            Long userId = extractUserIdFromAuth(authHeader);
+            String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+            Long userId = userService.getUserByEmail(userEmail).getId();
+
+            log.info("User {} is adding {} {} to their balance", userEmail, request.getAmount(), request.getCurrency());
 
             userService.addBalance(userId, request.getCurrency(), request.getAmount());
             UserWallet wallet = userService.getWallet(userId, request.getCurrency());
@@ -39,6 +44,8 @@ public class BalanceController {
                     .availableBalance(wallet.getAvailableBalance())
                     .build();
 
+            log.info("Balance added successfully for user {}: {} {} now has balance of {}",
+                    userEmail, request.getAmount(), request.getCurrency(), wallet.getBalance());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error adding balance", e);
@@ -48,11 +55,14 @@ public class BalanceController {
 
     @GetMapping("/{currency}")
     public ResponseEntity<BalanceResponse> getBalance(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String currency) {
 
         try {
-            Long userId = extractUserIdFromAuth(authHeader);
+            String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+            Long userId = userService.getUserByEmail(userEmail).getId();
+
+            log.info("User {} requested balance for {}", userEmail, currency);
+
             UserWallet wallet = userService.getWallet(userId, currency);
 
             BalanceResponse response = BalanceResponse.builder()
@@ -63,21 +73,12 @@ public class BalanceController {
                     .availableBalance(wallet.getAvailableBalance())
                     .build();
 
+            log.info("Balance retrieved for user {}: {} balance = {}, locked = {}, available = {}",
+                    userEmail, currency, wallet.getBalance(), wallet.getLockedAmount(), wallet.getAvailableBalance());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting balance", e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-    }
-
-    private Long extractUserIdFromAuth(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid or missing Authorization header");
-        }
-        try {
-            return Long.parseLong(authHeader.substring(7));
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid user ID in Authorization header");
         }
     }
 }

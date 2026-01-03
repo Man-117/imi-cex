@@ -2,6 +2,8 @@ package org.william.cex.domain.blnk.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.Type;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,6 +37,7 @@ public class BlnkTransaction {
     private Status status;
 
     @Column(columnDefinition = "JSONB")
+    @Type(JsonBinaryType.class)
     private JsonNode responseData;
 
     @Column(nullable = false, updatable = false)
