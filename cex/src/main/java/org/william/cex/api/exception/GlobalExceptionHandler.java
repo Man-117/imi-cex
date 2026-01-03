@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
                 ));
 
         Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
+        response.put("timestamp", Instant.now().toString());
         response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("error", "Validation Failed");
         response.put("errors", errors);
@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
             HttpStatus status, String message) {
         Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
+        response.put("timestamp", Instant.now().toString());
         response.put("status", status.value());
         response.put("error", status.getReasonPhrase());
         response.put("message", message);

@@ -73,6 +73,27 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
     }
 
+    /**
+     * Authenticate user with email and password
+     * @param email user email
+     * @param password raw password
+     * @return authenticated user
+     * @throws UserNotFoundException if user not found
+     * @throws IllegalArgumentException if password is invalid
+     */
+    public User authenticateUser(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            log.warn("Invalid password attempt for user: {}", email);
+            throw new IllegalArgumentException("Invalid password");
+        }
+
+        log.info("User authenticated successfully: {}", email);
+        return user;
+    }
+
     @Transactional
     public void addBalance(Long userId, String currency, BigDecimal amount) {
         User user = getUserById(userId);

@@ -3,6 +3,7 @@ package org.william.cex.api.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,8 +16,9 @@ import java.util.Map;
 @Slf4j
 public class MarketController {
 
-    @GetMapping("/price/{pair}")
-    public ResponseEntity<Map<String, Object>> getMarketPrice(String pair) {
+    @GetMapping("/price/{base}/{quote}")
+    public ResponseEntity<Map<String, Object>> getMarketPrice(@PathVariable String base, @PathVariable String quote) {
+        String pair = base.toUpperCase() + "/" + quote.toUpperCase();
         try {
             log.info("Requested market price for pair: {}", pair);
 

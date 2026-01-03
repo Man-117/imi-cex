@@ -47,8 +47,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
-            User user = userService.getUserByEmail(request.getEmail());
-            // Note: In production, validate password here
+            User user = userService.authenticateUser(request.getEmail(), request.getPassword());
             String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().toString());
 
             AuthResponse response = AuthResponse.builder()

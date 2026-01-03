@@ -1,6 +1,7 @@
 package org.william.cex.infrastructure.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,7 +18,8 @@ import java.util.Map;
 @Slf4j
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
@@ -29,7 +31,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 
         Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", LocalDateTime.now());
+        errorResponse.put("timestamp", Instant.now());
         errorResponse.put("status", HttpServletResponse.SC_FORBIDDEN);
         errorResponse.put("error", "Forbidden");
         errorResponse.put("message", "You do not have permission to access this resource.");
