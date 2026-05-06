@@ -1,0 +1,144 @@
+package org.william.cex.api.controller;
+
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.william.cex.api.dto.request.CreateOrderRequest;
+import org.william.cex.api.dto.response.OrderResponse;
+import org.william.cex.domain.idempotency.service.IdempotencyService;
+import org.william.cex.domain.order.entity.Order;
+import org.william.cex.domain.order.service.OrderService;
+import org.william.cex.domain.user.service.UserService;
+import org.william.cex.infrastructure.security.AuthenticationUtils;
+
+@RestController
+@RequestMapping("/v1/orders")
+@Slf4j
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private AuthenticationUtils authenticationUtils;
+
+    @Autowired
+    private IdempotencyService idempotencyService;
+
+    @PostMapping
+    public ResponseEntity<OrderResponse> createOrder(
+            @Valid @RequestBody CreateOrderRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+        Long userId = userService.getUserByEmail(userEmail).getId();
+
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, OrderResponse.class);
+            if (cachedResponse.isPresent()) {
+                var cached = cachedResponse.get();
+                return ResponseEntity.status(cached.statusCode()).body(cached.body());
+            }
+        }
+
+        Order.OrderType orderType = Order.OrderType.valueOf(request.getOrderType().toUpperCase());
+
+        log.info("User {} is creating {} order: {} {} -> {} at price {}",
+                userEmail, orderType, request.getAmount(), request.getBaseCurrency(),
+                request.getQuoteCurrency(), request.getPrice());
+
+        Order order = orderService.createOrder(
+                userId,
+                orderType,
+                request.getBaseCurrency(),
+                request.getQuoteCurrency(),
+                request.getAmount(),
+                request.getPrice()
+        );
+
+        OrderResponse response = mapToResponse(order);
+        idempotencyService.storeResponse(idempotencyKey, userId, HttpStatus.CREATED.value(), response);
+
+        log.info("Order created successfully for user {}: Order ID {} - {} {} at {}",
+                userEmail, order.getId(), request.getAmount(), request.getBaseCurrency(), request.getPrice());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponse> getOrder(
+            @PathVariable Long orderId) {
+        String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+        Long userId = userService.getUserByEmail(userEmail).getId();
+
+        log.info("User {} requested details for order {}", userEmail, orderId);
+
+        Order order = orderService.getOrder(orderId);
+
+        // Verify ownership
+        if (!order.getUserId().equals(userId)) {
+            log.warn("User {} attempted to access order {} which belongs to user {}",
+                    userEmail, orderId, order.getUserId());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        OrderResponse response = mapToResponse(order);
+
+        log.info("Order details retrieved for user {}: Order ID {} - {} {} {}",
+                userEmail, orderId, order.getOrderType(), order.getAmount(), order.getStatus());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<Void> cancelOrder(
+            @PathVariable Long orderId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        String userEmail = authenticationUtils.getAuthenticatedUserEmail();
+        Long userId = userService.getUserByEmail(userEmail).getId();
+
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, Void.class);
+            if (cachedResponse.isPresent()) {
+                return ResponseEntity.status(cachedResponse.get().statusCode()).build();
+            }
+        }
+
+        log.info("User {} is cancelling order {}", userEmail, orderId);
+
+        Order order = orderService.getOrder(orderId);
+
+        // Verify ownership
+        if (!order.getUserId().equals(userId)) {
+            log.warn("User {} attempted to cancel order {} which belongs to user {}",
+                    userEmail, orderId, order.getUserId());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        orderService.cancelOrder(orderId);
+        idempotencyService.storeResponse(idempotencyKey, userId, HttpStatus.NO_CONTENT.value(), null);
+
+        log.info("Order cancelled successfully for user {}: Order ID {}", userEmail, orderId);
+        return ResponseEntity.noContent().build();
+    }
+
+    private OrderResponse mapToResponse(Order order) {
+        return OrderResponse.builder()
+                .id(order.getId())
+                .userId(order.getUserId())
+                .orderType(order.getOrderType().toString())
+                .baseCurrency(order.getBaseCurrency())
+                .quoteCurrency(order.getQuoteCurrency())
+                .amount(order.getAmount())
+                .price(order.getPrice())
+                .filledAmount(order.getFilledAmount())
+                .status(order.getStatus().toString())
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
+                .build();
+    }
+}
+
