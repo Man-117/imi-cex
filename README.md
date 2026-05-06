@@ -1,6 +1,6 @@
-# Centralized Crypto Exchange (Interview Project)
+# Centralized Crypto Exchange Backend
 
-This repository contains a Spring Boot backend that simulates the core flow of a centralized crypto exchange for interview discussion and demo purposes.
+This repository contains a Spring Boot backend that implements the core flow of a centralized crypto exchange.
 
 ## What this project is
 
@@ -122,9 +122,9 @@ mvn test
 
 Integration tests use Testcontainers for PostgreSQL + Redis so local developer services are not required.
 
-## Interview framing
+## Project strengths
 
-Use this project as a **CEX core ledger and order workflow simulator**. It demonstrates:
+This project demonstrates:
 
 - wallet locking/unlocking invariants
 - matching + settlement flow
