@@ -36,7 +36,12 @@ public class IdempotencyService {
             return Optional.empty();
         }
 
-        Object cached = cacheManager.getIdempotencyKey(key);
+        Object cached;
+        try {
+            cached = cacheManager.getIdempotencyKey(key);
+        } catch (Exception e) {
+            cached = null;
+        }
         if (cached != null) {
             JsonNode payload = objectMapper.valueToTree(cached);
             CachedResponse<T> response = toCachedResponse(payload, userId, bodyType);
@@ -54,7 +59,11 @@ public class IdempotencyService {
         }
 
         CachedResponse<T> response = toCachedResponse(entry.getResponseData(), userId, bodyType);
-        cacheManager.setIdempotencyKey(key, entry.getResponseData(), IDEMPOTENCY_TTL_HOURS);
+        try {
+            cacheManager.setIdempotencyKey(key, entry.getResponseData(), IDEMPOTENCY_TTL_HOURS);
+        } catch (Exception ignored) {
+            // Cache write failures should not block idempotent behavior backed by DB.
+        }
         return Optional.of(response);
     }
 
@@ -86,7 +95,11 @@ public class IdempotencyService {
         entry.setResponseData(payload);
         entry.setExpiresAt(LocalDateTime.now().plusHours(IDEMPOTENCY_TTL_HOURS));
         idempotencyKeyRepository.save(entry);
-        cacheManager.setIdempotencyKey(key, payload, IDEMPOTENCY_TTL_HOURS);
+        try {
+            cacheManager.setIdempotencyKey(key, payload, IDEMPOTENCY_TTL_HOURS);
+        } catch (Exception ignored) {
+            // Persisted key remains source-of-truth if cache is unavailable.
+        }
     }
 
     private <T> CachedResponse<T> toCachedResponse(JsonNode payload, Long userId, Class<T> bodyType) {

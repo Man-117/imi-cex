@@ -1,5 +1,6 @@
 package org.william.cex.domain.order.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -83,14 +84,17 @@ public class Order {
         PENDING, FILLED, CANCELLED, PARTIALLY_FILLED
     }
 
+    @JsonIgnore
     public BigDecimal getTotalValue() {
         return amount.multiply(price);
     }
 
+    @JsonIgnore
     public BigDecimal getRemainingAmount() {
         return amount.subtract(filledAmount);
     }
 
+    @JsonIgnore
     public boolean isFullyFilled() {
         return filledAmount.compareTo(amount) >= 0;
     }

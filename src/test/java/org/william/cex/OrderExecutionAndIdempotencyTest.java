@@ -70,7 +70,7 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
 
         JsonNode buyerBtcBalance = getBalance(buyerToken, "BTC");
         JsonNode sellerUsdBalance = getBalance(sellerToken, "USD");
-        assertEquals(new BigDecimal("1.00000000"), new BigDecimal(buyerBtcBalance.path("balance").asText()));
+        assertEquals(0, new BigDecimal("1.00000000").compareTo(new BigDecimal(buyerBtcBalance.path("balance").asText())));
         assertTrue(new BigDecimal(sellerUsdBalance.path("balance").asText()).compareTo(new BigDecimal("48900")) > 0);
     }
 
@@ -82,7 +82,11 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
         String balanceKey = "idem-balance-" + UUID.randomUUID();
         JsonNode firstBalance = addBalance(token, "USD", new BigDecimal("5000"), balanceKey);
         JsonNode secondBalance = addBalance(token, "USD", new BigDecimal("5000"), balanceKey);
-        assertEquals(firstBalance.path("balance").asText(), secondBalance.path("balance").asText());
+        assertEquals(
+                0,
+                new BigDecimal(firstBalance.path("balance").asText())
+                        .compareTo(new BigDecimal(secondBalance.path("balance").asText()))
+        );
 
         String orderKey = "idem-order-" + UUID.randomUUID();
         JsonNode firstOrder = createOrder(

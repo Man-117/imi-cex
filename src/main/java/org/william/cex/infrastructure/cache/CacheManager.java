@@ -2,6 +2,7 @@ package org.william.cex.infrastructure.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +28,13 @@ public class CacheManager {
 
     public Object getBalance(Long userId, String currency) {
         String key = String.format(BALANCE_KEY, userId, currency);
-        return redisTemplate.opsForValue().get(key);
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (SerializationException e) {
+            log.warn("Failed to deserialize cached balance key {}. Evicting corrupt entry.", key);
+            redisTemplate.delete(key);
+            return null;
+        }
     }
 
     public void clearBalance(Long userId, String currency) {
@@ -47,7 +54,13 @@ public class CacheManager {
 
     public Object getOrder(Long orderId) {
         String key = String.format(ORDER_KEY, orderId);
-        return redisTemplate.opsForValue().get(key);
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (SerializationException e) {
+            log.warn("Failed to deserialize cached order key {}. Evicting corrupt entry.", key);
+            redisTemplate.delete(key);
+            return null;
+        }
     }
 
     public void clearOrder(Long orderId) {
@@ -62,7 +75,13 @@ public class CacheManager {
 
     public Object getFeeRate(String currencyPair) {
         String key = String.format(FEE_RATE_KEY, currencyPair);
-        return redisTemplate.opsForValue().get(key);
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (SerializationException e) {
+            log.warn("Failed to deserialize cached fee key {}. Evicting corrupt entry.", key);
+            redisTemplate.delete(key);
+            return null;
+        }
     }
 
     public void clearFeeRates() {
@@ -77,7 +96,13 @@ public class CacheManager {
 
     public Object getIdempotencyKey(String idempotencyKey) {
         String key = String.format(IDEMPOTENCY_KEY, idempotencyKey);
-        return redisTemplate.opsForValue().get(key);
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (SerializationException e) {
+            log.warn("Failed to deserialize cached idempotency key {}. Evicting corrupt entry.", key);
+            redisTemplate.delete(key);
+            return null;
+        }
     }
 }
 
