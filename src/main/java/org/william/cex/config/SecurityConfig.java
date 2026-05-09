@@ -71,6 +71,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/v1/auth/register", "/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/admin/register", "/v1/admin/login", "/api/v1/admin/register", "/api/v1/admin/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/actuator/health", "/actuator/health").permitAll()
+                .requestMatchers(
+                        "/v3/api-docs/**",
+                        "/api/v3/api-docs/**",
+                        "/swagger-ui.html",
+                        "/api/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/api/swagger-ui/**")
+                .permitAll()
 
                 // All other requests require authentication
                 .anyRequest().authenticated()

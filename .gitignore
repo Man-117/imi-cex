@@ -49,4 +49,6 @@ Thumbs.db
 .gradle/
 
 # Cursor local metadata
-.cursor/
+.cursor/*
+!.cursor/environment.json
+!.cursor/Dockerfile

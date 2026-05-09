@@ -122,6 +122,15 @@ mvn test
 
 Integration tests use Testcontainers for PostgreSQL + Redis so local developer services are not required.
 
+## API documentation
+
+- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
+- OpenAPI spec: `http://localhost:8080/api/v3/api-docs`
+
+## User guide
+
+See [docs/user-guide.md](docs/user-guide.md) for setup, authentication, and endpoint usage examples.
+
 ## Project strengths
 
 This project demonstrates:
