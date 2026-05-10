@@ -133,6 +133,27 @@ Auto-repair currently handles:
 
 Breaks that cannot be repaired safely are moved to `MANUAL_REVIEW`.
 
+## 3.4 Automatic reconciliation scheduler
+
+Automatic reconciliation is now supported through a background scheduler.
+
+Default behavior:
+
+- enabled: `true`
+- schedule: every 15 minutes
+- lookback window: last 24 hours
+- automatic repair: enabled
+
+Environment variables:
+
+- `CEX_RECONCILIATION_AUTO_ENABLED` (default: `true`)
+- `CEX_RECONCILIATION_AUTO_CRON` (default: `0 */15 * * * *`)
+- `CEX_RECONCILIATION_AUTO_ZONE` (default: `UTC`)
+- `CEX_RECONCILIATION_AUTO_LOOKBACK_HOURS` (default: `24`)
+- `CEX_RECONCILIATION_AUTO_AUTO_REPAIR` (default: `true`)
+
+When enabled, each scheduled run is persisted in reconciliation run history just like manual runs.
+
 ## 4. Operational guidance
 
 ## 4.1 Key rotation
