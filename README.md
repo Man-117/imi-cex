@@ -131,6 +131,10 @@ Integration tests use Testcontainers for PostgreSQL + Redis so local developer s
 
 See [docs/user-guide.md](docs/user-guide.md) for setup, authentication, and endpoint usage examples.
 
+## Administrator guide
+
+See [docs/admin-guide.md](docs/admin-guide.md) for admin bootstrap, fee management, security, and operations guidance.
+
 ## Project strengths
 
 This project demonstrates:
