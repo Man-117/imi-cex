@@ -91,6 +91,69 @@ Notes:
 
 Admin token is required.
 
+## 3.3 Run and repair trade reconciliation
+
+Use these endpoints to perform finance/ops reconciliation between trades, order fill state, and fee ledger records.
+
+### Run reconciliation
+
+`POST /api/v1/admin/reconciliation/trades/run?lookbackHours=24`
+
+- `lookbackHours` must be in range `1` to `720`
+- returns a run record with issue list for the inspected window
+- run metadata is auditable via `audit_logs`
+
+Common issue types:
+
+- `UNSETTLED_TRADE`: trade is not marked settled
+- `ORDER_FILLED_MISMATCH`: `orders.filled_amount` differs from reconciled trade sum
+- `FEE_LEDGER_MISMATCH`: fee transactions differ from expected fee totals
+
+### List recent runs
+
+`GET /api/v1/admin/reconciliation/trades/runs`
+
+Returns the latest reconciliation runs (without per-issue payload).
+
+### Get run details
+
+`GET /api/v1/admin/reconciliation/trades/runs/{runId}`
+
+Returns run-level status and per-issue records.
+
+### Auto-repair fixable breaks
+
+`POST /api/v1/admin/reconciliation/trades/runs/{runId}/repair`
+
+Auto-repair currently handles:
+
+- missing trade settlement flags (`UNSETTLED_TRADE`)
+- order filled amount drift (`ORDER_FILLED_MISMATCH`)
+- missing fee entries where expected fee is greater than actual (`FEE_LEDGER_MISMATCH`)
+
+Breaks that cannot be repaired safely are moved to `MANUAL_REVIEW`.
+
+## 3.4 Automatic reconciliation scheduler
+
+Automatic reconciliation is now supported through a background scheduler.
+
+Default behavior:
+
+- enabled: `true`
+- schedule: every 15 minutes
+- lookback window: last 24 hours
+- automatic repair: enabled
+
+Environment variables:
+
+- `CEX_RECONCILIATION_AUTO_ENABLED` (default: `true`)
+- `CEX_RECONCILIATION_AUTO_CRON` (default: `0 */15 * * * *`)
+- `CEX_RECONCILIATION_AUTO_ZONE` (default: `UTC`)
+- `CEX_RECONCILIATION_AUTO_LOOKBACK_HOURS` (default: `24`)
+- `CEX_RECONCILIATION_AUTO_AUTO_REPAIR` (default: `true`)
+
+When enabled, each scheduled run is persisted in reconciliation run history just like manual runs.
+
 ## 4. Operational guidance
 
 ## 4.1 Key rotation
