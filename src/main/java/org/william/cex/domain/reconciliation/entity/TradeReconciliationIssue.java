@@ -1,11 +1,13 @@
 package org.william.cex.domain.reconciliation.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,7 +53,8 @@ public class TradeReconciliationIssue {
 
     private BigDecimal actualValue;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "JSONB")
+    @Type(JsonBinaryType.class)
     private JsonNode metadata;
 
     @Enumerated(EnumType.STRING)

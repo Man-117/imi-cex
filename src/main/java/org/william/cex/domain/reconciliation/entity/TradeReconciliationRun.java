@@ -1,11 +1,13 @@
 package org.william.cex.domain.reconciliation.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 
@@ -50,7 +52,8 @@ public class TradeReconciliationRun {
     @Column(length = 500)
     private String failureReason;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "JSONB")
+    @Type(JsonBinaryType.class)
     private JsonNode summary;
 
     @Column(nullable = false, updatable = false)
