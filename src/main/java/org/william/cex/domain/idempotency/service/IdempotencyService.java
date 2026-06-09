@@ -30,7 +30,6 @@ public class IdempotencyService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional(readOnly = true)
     public <T> Optional<CachedResponse<T>> getCachedResponse(String key, Long userId, Class<T> bodyType) {
         if (key == null || key.isBlank()) {
             return Optional.empty();
@@ -67,7 +66,6 @@ public class IdempotencyService {
         return Optional.of(response);
     }
 
-    @Transactional
     public void storeResponse(String key, Long userId, int statusCode, Object body) {
         if (key == null || key.isBlank()) {
             return;

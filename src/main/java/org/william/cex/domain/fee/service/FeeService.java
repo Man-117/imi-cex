@@ -52,7 +52,6 @@ public class FeeService {
         return feeRate;
     }
 
-    @Transactional
     public FeeRate updateFeeRate(String currencyPair, BigDecimal feePercentage, Long adminId) {
         if (feePercentage.compareTo(BigDecimal.ZERO) < 0 || feePercentage.compareTo(BigDecimal.ONE) > 0) {
             throw new IllegalArgumentException("Fee percentage must be between 0 and 1");
@@ -77,27 +76,6 @@ public class FeeService {
 
         log.info("Fee rate updated for pair {}: {}", currencyPair, feePercentage);
         return feeRate;
-    }
-
-    @Transactional
-    public void recordFeeTransaction(Long orderId, BigDecimal feeAmount, FeeTransaction.FeeType feeType) {
-        if (feeAmount == null || feeAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
-        }
-
-        FeeTransaction transaction = FeeTransaction.builder()
-                .orderId(orderId)
-                .amount(scale(feeAmount))
-                .feeType(feeType)
-                .build();
-
-        feeTransactionRepository.save(transaction);
-        log.info("Fee transaction recorded for order {}: {} {}", orderId, feeAmount, feeType);
-    }
-
-    public BigDecimal getTotalFees() {
-        BigDecimal total = feeTransactionRepository.getTotalFees();
-        return total != null ? total : BigDecimal.ZERO;
     }
 
     public List<FeeRate> getAllFeeRates() {

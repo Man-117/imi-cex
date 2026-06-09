@@ -43,7 +43,6 @@ public class AdminService {
      * @return Created admin user
      * @throws IllegalArgumentException if email is already registered or admin key is invalid
      */
-    @Transactional
     public User registerAdmin(String email, String password, String adminKey) {
         // Validate admin key
         if (!adminRegistrationKey.equals(adminKey)) {
@@ -81,7 +80,6 @@ public class AdminService {
      * @throws UserNotFoundException if user not found
      * @throws UnauthorizedException if password is incorrect or user is not admin
      */
-    @Transactional(readOnly = true)
     public User loginAdmin(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
@@ -113,7 +111,6 @@ public class AdminService {
      * @param userId User ID
      * @return true if user is admin, false otherwise
      */
-    @Transactional(readOnly = true)
     public boolean isAdmin(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("invalid user id."))

@@ -8,9 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.william.cex.exception.InsufficientBalanceException;
 import org.william.cex.exception.UserNotFoundException;
 import org.william.cex.domain.user.entity.User;
-import org.william.cex.domain.user.entity.UserAccount;
 import org.william.cex.domain.user.entity.UserWallet;
-import org.william.cex.domain.user.repository.UserAccountRepository;
 import org.william.cex.domain.user.repository.UserRepository;
 import org.william.cex.domain.user.repository.UserWalletRepository;
 import org.william.cex.infrastructure.cache.CacheManager;
@@ -29,15 +27,11 @@ public class UserService {
     private UserWalletRepository walletRepository;
 
     @Autowired
-    private UserAccountRepository accountRepository;
-
-    @Autowired
     private CacheManager cacheManager;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Transactional
     public User registerUser(String email, String password) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered");
@@ -51,14 +45,6 @@ public class UserService {
                 .build();
 
         user = userRepository.save(user);
-
-        // Create user account
-        UserAccount account = UserAccount.builder()
-                .userId(user.getId())
-                .totalDeposits(BigDecimal.ZERO)
-                .totalWithdrawals(BigDecimal.ZERO)
-                .build();
-        accountRepository.save(account);
 
         log.info("User registered: {}", email);
         return user;
@@ -105,12 +91,6 @@ public class UserService {
         wallet.setBalance(scale(wallet.getBalance().add(scale(amount))));
         walletRepository.save(wallet);
 
-        // Update user account
-        UserAccount account = accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new UserNotFoundException("User account not found"));
-        account.setTotalDeposits(account.getTotalDeposits().add(amount));
-        accountRepository.save(account);
-
         // Invalidate cache
         cacheManager.clearBalance(userId, normalizedCurrency);
 
@@ -133,7 +113,6 @@ public class UserService {
         return wallet;
     }
 
-    @Transactional
     public void lockBalance(Long userId, String currency, BigDecimal amount) {
         String normalizedCurrency = normalizeCurrency(currency);
         UserWallet wallet = getWallet(userId, normalizedCurrency);
@@ -150,7 +129,6 @@ public class UserService {
         log.info("Balance locked for user {} currency {}: {}", userId, normalizedCurrency, normalizedAmount);
     }
 
-    @Transactional
     public void unlockBalance(Long userId, String currency, BigDecimal amount) {
         String normalizedCurrency = normalizeCurrency(currency);
         BigDecimal normalizedAmount = scale(amount);
@@ -162,7 +140,7 @@ public class UserService {
         log.info("Balance unlocked for user {} currency {}: {}", userId, normalizedCurrency, normalizedAmount);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void settleBuyTrade(Long userId,
                                String baseCurrency,
                                String quoteCurrency,
@@ -201,7 +179,7 @@ public class UserService {
         cacheManager.clearBalance(userId, normalizedQuoteCurrency);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void settleSellTrade(Long userId,
                                 String baseCurrency,
                                 String quoteCurrency,

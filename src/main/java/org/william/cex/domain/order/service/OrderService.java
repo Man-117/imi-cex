@@ -63,7 +63,7 @@ public class OrderService {
     @Value("${cex.risk.max-daily-notional:2000000}")
     private BigDecimal maxDailyNotional;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Long userId, Order.OrderType orderType, String baseCurrency,
                             String quoteCurrency, BigDecimal amount, BigDecimal price) {
         String normalizedBase = normalizeCurrency(baseCurrency);
@@ -124,7 +124,7 @@ public class OrderService {
         return order;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId) {
         Order order = getOrder(orderId);
 
@@ -155,7 +155,7 @@ public class OrderService {
         log.info("Order cancelled: {}", orderId);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void fillOrder(Long orderId, BigDecimal filledAmount) {
         Order order = getOrder(orderId);
 
@@ -259,9 +259,6 @@ public class OrderService {
         orderRepository.save(sellOrder);
         cacheManager.clearOrder(buyOrder.getId());
         cacheManager.clearOrder(sellOrder.getId());
-
-        feeService.recordFeeTransaction(buyOrder.getId(), buyFee, FeeTransaction.FeeType.TRADING_FEE);
-        feeService.recordFeeTransaction(sellOrder.getId(), sellFee, FeeTransaction.FeeType.TRADING_FEE);
 
         tradingMetricsService.incrementTradesExecuted();
         log.info("Trade executed buyOrder={} sellOrder={} amount={} price={}",
