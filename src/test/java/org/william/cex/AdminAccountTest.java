@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.william.cex.api.dto.request.AdminRegisterRequest;
@@ -16,14 +15,12 @@ import org.william.cex.api.dto.request.LoginRequest;
 import org.william.cex.api.dto.request.UpdateFeeRateRequest;
 import org.william.cex.api.dto.response.AuthResponse;
 import org.william.cex.domain.user.repository.UserRepository;
-import org.william.cex.domain.admin.repository.AdministratorRepository;
 import org.william.cex.support.IntegrationTestBase;
 
 import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.hamcrest.Matchers.*;
 
 /**
  * Comprehensive test suite for Admin Account functionality
@@ -43,9 +40,6 @@ class AdminAccountTest extends IntegrationTestBase {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private AdministratorRepository administratorRepository;
 
     @Value("${admin.registration.key}")
     private String adminKey;
@@ -267,8 +261,6 @@ class AdminAccountTest extends IntegrationTestBase {
             // Clean up test admin
             userRepository.findByEmail(testAdminEmail)
                     .ifPresent(user -> {
-                        administratorRepository.findByUserId(user.getId())
-                                .ifPresent(administratorRepository::delete);
                         userRepository.delete(user);
                         log.info("Test admin cleaned up: {}", testAdminEmail);
                     });

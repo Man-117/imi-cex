@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.william.cex.api.exception.IdempotencyConflictException;
+import org.william.cex.exception.IdempotencyConflictException;
 import org.william.cex.domain.idempotency.entity.IdempotencyKey;
 import org.william.cex.domain.idempotency.repository.IdempotencyKeyRepository;
 import org.william.cex.infrastructure.cache.CacheManager;

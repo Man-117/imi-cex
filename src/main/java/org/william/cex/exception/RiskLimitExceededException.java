@@ -1,4 +1,4 @@
-package org.william.cex.api.exception;
+package org.william.cex.exception;
 
 public class RiskLimitExceededException extends RuntimeException {
     public RiskLimitExceededException(String message) {

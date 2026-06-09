@@ -6,18 +6,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.william.cex.api.exception.UnauthorizedException;
-import org.william.cex.api.exception.UserNotFoundException;
-import org.william.cex.domain.admin.entity.Administrator;
+import org.william.cex.exception.UnauthorizedException;
+import org.william.cex.exception.UserNotFoundException;
 import org.william.cex.domain.admin.entity.AuditLog;
-import org.william.cex.domain.admin.repository.AdministratorRepository;
 import org.william.cex.domain.admin.repository.AuditLogRepository;
 import org.william.cex.domain.user.entity.User;
 import org.william.cex.domain.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -25,9 +21,6 @@ public class AdminService {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private AdministratorRepository administratorRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -43,7 +36,8 @@ public class AdminService {
 
     /**
      * Register a new admin account
-     * @param email Admin email
+     *
+     * @param email    Admin email
      * @param password Admin password
      * @param adminKey Admin registration key
      * @return Created admin user
@@ -73,13 +67,6 @@ public class AdminService {
 
         adminUser = userRepository.save(adminUser);
 
-        // Create administrator record
-        Administrator administrator = Administrator.builder()
-                .userId(adminUser.getId())
-                .permissions(null) // Default permissions, can be customized
-                .build();
-
-        administratorRepository.save(administrator);
 
         log.info("Admin user registered successfully: {}", email);
         return adminUser;
@@ -87,7 +74,8 @@ public class AdminService {
 
     /**
      * Login admin account
-     * @param email Admin email
+     *
+     * @param email    Admin email
      * @param password Admin password
      * @return Admin user if authentication successful
      * @throws UserNotFoundException if user not found
@@ -102,7 +90,8 @@ public class AdminService {
                 });
 
         // Verify user is an admin
-        if (!user.getRole().equals(User.UserRole.ADMIN)) {
+        if (!user.getRole()
+                .equals(User.UserRole.ADMIN)) {
             log.warn("Non-admin user {} attempted to login via admin endpoint", email);
             throw new UnauthorizedException("User is not an admin");
         }
@@ -117,24 +106,20 @@ public class AdminService {
         return user;
     }
 
-    /**
-     * Get admin by user ID
-     * @param userId User ID
-     * @return Administrator record if exists
-     */
-    @Transactional(readOnly = true)
-    public Optional<Administrator> getAdminByUserId(Long userId) {
-        return administratorRepository.findByUserId(userId);
-    }
 
     /**
      * Check if a user is an admin
+     *
      * @param userId User ID
      * @return true if user is admin, false otherwise
      */
     @Transactional(readOnly = true)
     public boolean isAdmin(Long userId) {
-        return administratorRepository.findByUserId(userId).isPresent();
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("invalid user id."))
+                .getRole()
+                .equals(User.UserRole.ADMIN);
+
     }
 
     @Transactional

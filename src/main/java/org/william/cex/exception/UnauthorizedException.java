@@ -1,4 +1,4 @@
-package org.william.cex.api.exception;
+package org.william.cex.exception;
 
 public class UnauthorizedException extends RuntimeException {
     public UnauthorizedException(String message) {

@@ -1,4 +1,4 @@
-package org.william.cex.api.exception;
+package org.william.cex.exception;
 
 public class ReconciliationNotFoundException extends RuntimeException {
     public ReconciliationNotFoundException(String message) {
