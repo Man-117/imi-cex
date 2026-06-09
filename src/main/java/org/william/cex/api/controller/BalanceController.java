@@ -27,8 +27,7 @@ public class BalanceController {
     public ResponseEntity<BalanceResponse> addBalance(
             @Valid @RequestBody AddBalanceRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        String userEmail = authenticationUtils.getAuthenticatedUserEmail();
-        Long userId = userService.getUserByEmail(userEmail).getId();
+        Long userId = authenticationUtils.getAuthenticatedUserId();
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, BalanceResponse.class);
@@ -38,7 +37,7 @@ public class BalanceController {
             }
         }
 
-        log.info("User {} is adding {} {} to their balance", userEmail, request.getAmount(), request.getCurrency());
+        log.info("User {} is adding {} {} to their balance", userId, request.getAmount(), request.getCurrency());
 
         userService.addBalance(userId, request.getCurrency(), request.getAmount());
         UserWallet wallet = userService.getWallet(userId, request.getCurrency());
@@ -53,7 +52,7 @@ public class BalanceController {
 
         idempotencyService.storeResponse(idempotencyKey, userId, 200, response);
         log.info("Balance added successfully for user {}: {} {} now has balance of {}",
-                userEmail, request.getAmount(), request.getCurrency(), wallet.getBalance());
+                userId, request.getAmount(), request.getCurrency(), wallet.getBalance());
         return ResponseEntity.ok(response);
     }
 
@@ -63,10 +62,9 @@ public class BalanceController {
     @GetMapping("/{currency}")
     public ResponseEntity<BalanceResponse> getBalance(
             @PathVariable String currency) {
-        String userEmail = authenticationUtils.getAuthenticatedUserEmail();
-        Long userId = userService.getUserByEmail(userEmail).getId();
+        Long userId = authenticationUtils.getAuthenticatedUserId();
 
-        log.info("User {} requested balance for {}", userEmail, currency);
+        log.info("User {} requested balance for {}", userId, currency);
 
         UserWallet wallet = userService.getWallet(userId, currency);
 
@@ -79,7 +77,7 @@ public class BalanceController {
                 .build();
 
         log.info("Balance retrieved for user {}: {} balance = {}, locked = {}, available = {}",
-                userEmail, currency, wallet.getBalance(), wallet.getLockedAmount(), wallet.getAvailableBalance());
+                userId, currency, wallet.getBalance(), wallet.getLockedAmount(), wallet.getAvailableBalance());
         return ResponseEntity.ok(response);
     }
 }

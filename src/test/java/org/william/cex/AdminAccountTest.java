@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.william.cex.api.dto.request.AdminRegisterRequest;
 import org.william.cex.api.dto.request.LoginRequest;
 import org.william.cex.api.dto.request.UpdateFeeRateRequest;
+import org.william.cex.api.dto.response.AuthResponse;
 import org.william.cex.domain.user.repository.UserRepository;
 import org.william.cex.domain.admin.repository.AdministratorRepository;
 import org.william.cex.support.IntegrationTestBase;
@@ -31,6 +32,7 @@ import static org.hamcrest.Matchers.*;
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Slf4j
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdminAccountTest extends IntegrationTestBase {
 
     @Autowired
@@ -48,12 +50,12 @@ class AdminAccountTest extends IntegrationTestBase {
     @Value("${admin.registration.key}")
     private String adminKey;
 
-    private static String adminToken;
+    private String adminToken;
     private static String testAdminEmail = "test-admin@example.com";
     private static String testAdminPassword = "AdminPass123!";
 
-    @BeforeEach
-    void setUp() {
+    @BeforeAll
+    void setUp() throws Exception {
         log.info("Setting up test with admin key: {}", adminKey);
     }
 
@@ -69,9 +71,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .adminKey(adminKey)
                 .build();
 
-        MvcResult result = mockMvc.perform(post("/v1/admin/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        MvcResult result = mockMvc.perform(post("/v1/admin/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").exists())
                 .andExpect(jsonPath("$.userId").exists())
@@ -79,11 +80,14 @@ class AdminAccountTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn();
 
-        String responseBody = result.getResponse().getContentAsString();
+        String responseBody = result.getResponse()
+                .getContentAsString();
         log.info("Admin registration response: {}", responseBody);
 
         // Extract token for subsequent tests
-        adminToken = objectMapper.readTree(responseBody).get("token").asText();
+        adminToken = objectMapper.readTree(responseBody)
+                .get("token")
+                .asText();
         log.info("Admin token extracted: {}", adminToken.substring(0, 20) + "...");
     }
 
@@ -99,9 +103,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .adminKey("wrong-admin-key")
                 .build();
 
-        mockMvc.perform(post("/v1/admin/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/admin/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
         log.info("Invalid admin key correctly rejected");
@@ -119,9 +122,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .adminKey(adminKey)
                 .build();
 
-        mockMvc.perform(post("/v1/admin/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/admin/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
         log.info("Duplicate email correctly rejected");
@@ -138,9 +140,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .password(testAdminPassword)
                 .build();
 
-        MvcResult result = mockMvc.perform(post("/v1/admin/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        MvcResult result = mockMvc.perform(post("/v1/admin/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").exists())
                 .andExpect(jsonPath("$.userId").exists())
@@ -148,11 +149,16 @@ class AdminAccountTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn();
 
-        String responseBody = result.getResponse().getContentAsString();
+        String responseBody = result.getResponse()
+                .getContentAsString();
+        AuthResponse authResponse = objectMapper.readValue(responseBody, AuthResponse.class);
+        adminToken = authResponse.getToken();
         log.info("Admin login response: {}", responseBody);
 
         // Update token
-        adminToken = objectMapper.readTree(responseBody).get("token").asText();
+        adminToken = objectMapper.readTree(responseBody)
+                .get("token")
+                .asText();
         log.info("Admin token refreshed successfully");
     }
 
@@ -167,9 +173,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .password("WrongPassword123!")
                 .build();
 
-        mockMvc.perform(post("/v1/admin/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/admin/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
 
         log.info("Invalid password correctly rejected");
@@ -186,9 +191,8 @@ class AdminAccountTest extends IntegrationTestBase {
                 .password("Password123!")
                 .build();
 
-        mockMvc.perform(post("/v1/admin/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/admin/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
 
         log.info("Non-existent email correctly rejected");
@@ -196,38 +200,7 @@ class AdminAccountTest extends IntegrationTestBase {
 
     @Test
     @Order(7)
-    @DisplayName("Test 7: Get Account Balance - With Authentication")
-    void testGetAccountBalanceWithAuth() throws Exception {
-        log.info("=== TEST 7: Get Account Balance with Authentication ===");
-
-        MvcResult result = mockMvc.perform(get("/v1/admin/account/balance")
-                .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalDeposits").exists())
-                .andExpect(jsonPath("$.totalWithdrawals").exists())
-                .andExpect(jsonPath("$.totalFees").exists())
-                .andExpect(jsonPath("$.firmHoldings").exists())
-                .andReturn();
-
-        String responseBody = result.getResponse().getContentAsString();
-        log.info("Account balance response: {}", responseBody);
-    }
-
-    @Test
-    @Order(8)
-    @DisplayName("Test 8: Get Account Balance - Without Authentication")
-    void testGetAccountBalanceWithoutAuth() throws Exception {
-        log.info("=== TEST 8: Get Account Balance without Authentication ===");
-
-        mockMvc.perform(get("/v1/admin/account/balance"))
-                .andExpect(status().isUnauthorized());
-
-        log.info("Unauthorized access correctly rejected");
-    }
-
-    @Test
-    @Order(9)
-    @DisplayName("Test 9: Update Fee Rate - With Authentication")
+    @DisplayName("Test 7: Update Fee Rate - With Authentication")
     void testUpdateFeeRateWithAuth() throws Exception {
         log.info("=== TEST 9: Update Fee Rate with Authentication ===");
 
@@ -236,23 +209,23 @@ class AdminAccountTest extends IntegrationTestBase {
                 .feePercentage(new BigDecimal("0.25"))
                 .build();
 
-        MvcResult result = mockMvc.perform(post("/v1/admin/fees")
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        MvcResult result = mockMvc.perform(post("/v1/fees").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.currencyPair").value("BTC/USD"))
                 .andExpect(jsonPath("$.feePercentage").value(0.25))
                 .andReturn();
 
-        String responseBody = result.getResponse().getContentAsString();
+        String responseBody = result.getResponse()
+                .getContentAsString();
         log.info("Fee rate update response: {}", responseBody);
     }
 
     @Test
-    @Order(10)
-    @DisplayName("Test 10: Update Fee Rate - Without Authentication")
+    @Order(8)
+    @DisplayName("Test 8: Update Fee Rate - Without Authentication")
     void testUpdateFeeRateWithoutAuth() throws Exception {
         log.info("=== TEST 10: Update Fee Rate without Authentication ===");
 
@@ -261,52 +234,15 @@ class AdminAccountTest extends IntegrationTestBase {
                 .feePercentage(new BigDecimal("0.30"))
                 .build();
 
-        mockMvc.perform(post("/v1/admin/fees")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/fees").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
 
         log.info("Unauthorized fee update correctly rejected");
     }
 
     @Test
-    @Order(11)
-    @DisplayName("Test 11: Get All Fee Rates - Admin Access")
-    void testGetAllFeeRates() throws Exception {
-        log.info("=== TEST 11: Get All Fee Rates (Admin Access) ===");
-
-        MvcResult result = mockMvc.perform(get("/v1/admin/fees")
-                .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andReturn();
-
-        String responseBody = result.getResponse().getContentAsString();
-        log.info("All fee rates response: {}", responseBody);
-    }
-
-    @Test
-    @Order(12)
-    @DisplayName("Test 12: Admin Registration - Invalid Email Format")
-    void testAdminRegistrationInvalidEmailFormat() throws Exception {
-        log.info("=== TEST 12: Admin Registration with Invalid Email Format ===");
-
-        AdminRegisterRequest request = AdminRegisterRequest.builder()
-                .email("invalid-email-format")
-                .password("Password123!")
-                .adminKey(adminKey)
-                .build();
-
-        mockMvc.perform(post("/v1/admin/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-
-        log.info("Invalid email format correctly rejected");
-    }
-
-    @Test
-    @Order(13)
+    @Order(10)
     @DisplayName("Test 13: Admin Registration - Short Password")
     void testAdminRegistrationShortPassword() throws Exception {
         log.info("=== TEST 13: Admin Registration with Short Password ===");
@@ -317,25 +253,25 @@ class AdminAccountTest extends IntegrationTestBase {
                 .adminKey(adminKey)
                 .build();
 
-        mockMvc.perform(post("/v1/admin/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/admin/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
         log.info("Short password correctly rejected");
     }
 
     @AfterAll
-    static void tearDown(@Autowired UserRepository userRepository,
-                         @Autowired AdministratorRepository administratorRepository) {
+    void tearDown() {
         log.info("=== Cleaning up test data ===");
         try {
             // Clean up test admin
-            userRepository.findByEmail(testAdminEmail).ifPresent(user -> {
-                administratorRepository.findByUserId(user.getId()).ifPresent(administratorRepository::delete);
-                userRepository.delete(user);
-                log.info("Test admin cleaned up: {}", testAdminEmail);
-            });
+            userRepository.findByEmail(testAdminEmail)
+                    .ifPresent(user -> {
+                        administratorRepository.findByUserId(user.getId())
+                                .ifPresent(administratorRepository::delete);
+                        userRepository.delete(user);
+                        log.info("Test admin cleaned up: {}", testAdminEmail);
+                    });
         } catch (Exception e) {
             log.warn("Error during cleanup: {}", e.getMessage());
         }

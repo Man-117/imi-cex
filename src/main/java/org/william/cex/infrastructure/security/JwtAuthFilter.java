@@ -37,12 +37,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = extractToken(request);
 
             if (token != null && jwtTokenProvider.isTokenValid(token)) {
-                String email = jwtTokenProvider.getEmailFromToken(token);
+                Long userId = jwtTokenProvider.getUserIdFromToken(token);
                 String role = jwtTokenProvider.getRoleFromToken(token);
 
                 // Validate identity: verify user exists in the database
-                if (!userRepository.existsByEmail(email)) {
-                    log.warn("User not found in database for email: {}", email);
+                if (!userRepository.existsById(userId)) {
+                    log.warn("User not found in database for user ID: {}", userId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User no longer exists");
                     return;
                 }
@@ -50,13 +50,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // Create authentication token with role-based authority
                 String authority = "ROLE_" + (role != null ? role : "USER");
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
-                        email,
+                        userId,
                         null,
                         Collections.singletonList(new SimpleGrantedAuthority(authority))
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("JWT token validated and identity confirmed for user: {} with role: {}", email, role);
+                log.debug("JWT token validated and identity confirmed for user: {} with role: {}", userId, role);
             }
         } catch (Exception ex) {
             log.error("Failed to validate JWT token: {}", ex.getMessage());

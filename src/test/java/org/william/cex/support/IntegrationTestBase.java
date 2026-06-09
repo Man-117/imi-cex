@@ -10,9 +10,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+//@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class IntegrationTestBase {
 
     @Container
@@ -24,6 +23,12 @@ public abstract class IntegrationTestBase {
     @Container
     static final GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
             .withExposedPorts(6379);
+
+    static {
+        // This static block forces the container to start immediately when the class loader loads this class
+        if (!postgres.isRunning()) postgres.start();
+        if (!redis.isRunning()) redis.start();
+    }
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {

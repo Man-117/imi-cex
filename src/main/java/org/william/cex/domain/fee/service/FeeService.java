@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -67,7 +68,12 @@ public class FeeService {
         feeRate = feeRateRepository.save(feeRate);
 
         // Invalidate cache
-        cacheManager.clearFeeRates();
+        cacheManager.clearFeeRates(currencyPair);
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            log.warn("failed to invalidate cache of currency of {} twice.",currencyPair);
+        }
 
         log.info("Fee rate updated for pair {}: {}", currencyPair, feePercentage);
         return feeRate;

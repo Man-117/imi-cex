@@ -17,11 +17,11 @@ public class AuthenticationUtils {
     /**
      * Extract authenticated user's email from SecurityContext
      */
-    public String getAuthenticatedUserEmail() {
+    public Long getAuthenticatedUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
             log.debug("Request secured with authenticated user: {}", authentication.getPrincipal());
-            return (String) authentication.getPrincipal();
+            return (Long) authentication.getPrincipal();
         }
         log.warn("Request attempted without proper authentication");
         throw new IllegalArgumentException("User not authenticated");

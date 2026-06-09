@@ -49,43 +49,44 @@ public class SecurityConfig {
         log.info("Configuring Spring Security filter chain");
 
         http
-            // Disable CSRF for stateless REST API with JWT authentication
-            .csrf(csrf -> csrf.disable())
+                // Disable CSRF for stateless REST API with JWT authentication
+                .csrf(csrf -> csrf.disable())
 
-            // Configure CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Configure CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Use stateless session management for REST API
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Use stateless session management for REST API
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Configure exception handling for authentication and authorization
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler)
-            )
+                // Configure exception handling for authentication and authorization
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
 
-            // Configure endpoint authorization
-            .authorizeHttpRequests(authz -> authz
-                // Public endpoints - no authentication required
-                // Permit both with and without servlet context-path prefix so matching works regardless
-                .requestMatchers(HttpMethod.POST, "/v1/auth/register", "/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/v1/admin/register", "/v1/admin/login", "/api/v1/admin/register", "/api/v1/admin/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/actuator/health", "/actuator/health").permitAll()
-                .requestMatchers(
-                        "/v3/api-docs/**",
-                        "/api/v3/api-docs/**",
-                        "/swagger-ui.html",
-                        "/api/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/api/swagger-ui/**")
-                .permitAll()
+                // Configure endpoint authorization
+                .authorizeHttpRequests(authz -> authz
+                        // Public endpoints - no authentication required
+                        // Permit both with and without servlet context-path prefix so matching works regardless
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/register", "/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/login")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/admin/register", "/v1/admin/login", "/api/v1/admin/register", "/api/v1/admin/login")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/actuator/health", "/actuator/health")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.POST,"v1/fees/**")
+                        .authenticated()
+                        .requestMatchers("v1/fees/**")
+                        .permitAll()
+                        .requestMatchers("v1/market/**")
+                        .permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/api/v3/api-docs/**", "/swagger-ui.html", "/api/swagger-ui.html", "/swagger-ui/**", "/api/swagger-ui/**")
+                        .permitAll()
 
-                // All other requests require authentication
-                .anyRequest().authenticated()
-            )
+                        // All other requests require authentication
+                        .anyRequest()
+                        .authenticated())
 
-            // Add JWT filter before UsernamePasswordAuthenticationFilter
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // Add JWT filter before UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -84,9 +84,9 @@ public class CacheManager {
         }
     }
 
-    public void clearFeeRates() {
-        String pattern = String.format(FEE_RATE_KEY, "*");
-        redisTemplate.delete(redisTemplate.keys(pattern));
+    public void clearFeeRates(String currencyPair) {
+        String key = String.format(FEE_RATE_KEY, currencyPair);
+        redisTemplate.delete(redisTemplate.keys(key));
     }
 
     public void setIdempotencyKey(String idempotencyKey, Object response, long ttlHours) {
