@@ -9,7 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.william.cex.api.dto.request.RegisterUserRequest;
+import org.william.cex.dto.request.RegisterUserRequest;
+import org.william.cex.repository.UserRepository;
 import org.william.cex.support.IntegrationTestBase;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -122,7 +123,7 @@ class MarketAndFeeTest extends IntegrationTestBase {
     }
 
     @AfterAll
-    static void tearDown(@Autowired org.william.cex.domain.user.repository.UserRepository userRepository) {
+    static void tearDown(@Autowired UserRepository userRepository) {
         log.info("=== Cleaning up test data ===");
         try {
             userRepository.findByEmail("market-test@example.com").ifPresent(user -> {

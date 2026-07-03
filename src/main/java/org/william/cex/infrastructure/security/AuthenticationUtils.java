@@ -15,7 +15,7 @@ import java.util.Optional;
 public class AuthenticationUtils {
 
     /**
-     * Extract authenticated user's email from SecurityContext
+     * Extract authenticated user's ID from SecurityContext
      */
     public Long getAuthenticatedUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

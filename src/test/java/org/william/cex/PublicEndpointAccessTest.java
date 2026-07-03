@@ -10,9 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.william.cex.api.dto.request.AdminRegisterRequest;
-import org.william.cex.api.dto.request.LoginRequest;
-import org.william.cex.api.dto.request.RegisterUserRequest;
+import org.william.cex.dto.request.AdminRegisterRequest;
+import org.william.cex.dto.request.LoginRequest;
+import org.william.cex.dto.request.RegisterUserRequest;
 import org.william.cex.support.IntegrationTestBase;
 
 import java.util.UUID;

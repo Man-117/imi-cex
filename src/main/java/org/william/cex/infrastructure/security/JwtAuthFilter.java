@@ -12,7 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.william.cex.domain.user.repository.UserRepository;
+import org.william.cex.repository.UserRepository;
 
 import java.io.IOException;
 import java.util.Collections;

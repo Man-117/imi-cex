@@ -10,9 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.william.cex.api.dto.request.AddBalanceRequest;
-import org.william.cex.api.dto.request.CreateOrderRequest;
-import org.william.cex.api.dto.request.RegisterUserRequest;
+import org.william.cex.dto.request.AddBalanceRequest;
+import org.william.cex.dto.request.CreateOrderRequest;
+import org.william.cex.dto.request.RegisterUserRequest;
 import org.william.cex.support.IntegrationTestBase;
 
 import java.math.BigDecimal;

@@ -10,9 +10,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.william.cex.support.IntegrationTestBase;
-import org.william.cex.api.dto.request.LoginRequest;
-import org.william.cex.api.dto.request.RegisterUserRequest;
-import org.william.cex.domain.user.repository.UserRepository;
+import org.william.cex.dto.request.LoginRequest;
+import org.william.cex.dto.request.RegisterUserRequest;
+import org.william.cex.repository.UserRepository;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
