@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>org.william</groupId>
-    <artifactId>cex</artifactId>
+    <artifactId>exchange-server</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>cex</name>
+    <name>exchange-server</name>
     <description>cex</description>
     <url/>
     <licenses>
@@ -33,6 +33,11 @@
         <springdoc.version>2.8.6</springdoc.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.orderbook</groupId>
+            <artifactId>orderbook</artifactId>
+            <version>1.0.0</version>
+        </dependency>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
