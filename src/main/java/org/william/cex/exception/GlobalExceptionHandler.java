@@ -41,12 +41,6 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
-    @ExceptionHandler(IdempotencyConflictException.class)
-    public ResponseEntity<Map<String, Object>> handleIdempotencyConflict(
-            IdempotencyConflictException ex, WebRequest request) {
-        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage());
-    }
-
     @ExceptionHandler(RiskLimitExceededException.class)
     public ResponseEntity<Map<String, Object>> handleRiskLimitExceeded(
             RiskLimitExceededException ex, WebRequest request) {

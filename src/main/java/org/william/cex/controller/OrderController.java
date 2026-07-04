@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.william.cex.dto.request.CreateOrderRequest;
 import org.william.cex.dto.response.OrderResponse;
-import org.william.cex.service.IdempotencyService;
 import org.william.cex.entity.Order;
 import org.william.cex.service.OrderService;
 import org.william.cex.service.UserService;
@@ -28,22 +27,11 @@ public class OrderController {
     @Autowired
     private AuthenticationUtils authenticationUtils;
 
-    @Autowired
-    private IdempotencyService idempotencyService;
-
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
-            @Valid @RequestBody CreateOrderRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false)  String idempotencyKey) {
+            @Valid @RequestBody CreateOrderRequest request) {
          Long userId = authenticationUtils.getAuthenticatedUserId();
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, OrderResponse.class);
-            if (cachedResponse.isPresent()) {
-                var cached = cachedResponse.get();
-                return ResponseEntity.status(cached.statusCode()).body(cached.body());
-            }
-        }
 
         Order.OrderType orderType = Order.OrderType.valueOf(request.getOrderType().toUpperCase());
 
@@ -61,7 +49,6 @@ public class OrderController {
         );
 
         OrderResponse response = mapToResponse(order);
-        idempotencyService.storeResponse(idempotencyKey, userId, HttpStatus.CREATED.value(), response);
 
         log.info("Order created successfully for user {}: Order ID {} - {} {} at {}",
                 userId, order.getId(), request.getAmount(), request.getBaseCurrency(), request.getPrice());
@@ -93,16 +80,9 @@ public class OrderController {
 
     @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> cancelOrder(
-            @PathVariable Long orderId,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @PathVariable Long orderId) {
         Long userId = authenticationUtils.getAuthenticatedUserId();
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, Void.class);
-            if (cachedResponse.isPresent()) {
-                return ResponseEntity.status(cachedResponse.get().statusCode()).build();
-            }
-        }
 
         log.info("User {} is cancelling order {}", userId, orderId);
 
@@ -116,7 +96,6 @@ public class OrderController {
         }
 
         orderService.cancelOrder(orderId);
-        idempotencyService.storeResponse(idempotencyKey, userId, HttpStatus.NO_CONTENT.value(), null);
 
         log.info("Order cancelled successfully for user {}: Order ID {}", userId, orderId);
         return ResponseEntity.noContent().build();

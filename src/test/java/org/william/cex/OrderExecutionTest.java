@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
+class OrderExecutionTest extends IntegrationTestBase {
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,8 +49,7 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
                 "BTC",
                 "USD",
                 new BigDecimal("1"),
-                new BigDecimal("50000"),
-                null
+                new BigDecimal("50000")
         ).path("id").asLong();
 
         Long sellOrderId = createOrder(
@@ -59,8 +58,7 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
                 "BTC",
                 "USD",
                 new BigDecimal("1"),
-                new BigDecimal("49000"),
-                null
+                new BigDecimal("49000")
         ).path("id").asLong();
 
         JsonNode buyOrder = getOrder(buyerToken, buyOrderId);
@@ -74,31 +72,7 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
         assertTrue(new BigDecimal(sellerUsdBalance.path("balance").asText()).compareTo(new BigDecimal("48900")) > 0);
     }
 
-    @Test
-    @DisplayName("Idempotency key returns original write response")
-    void testIdempotencyForBalanceAndOrderCreate() throws Exception {
-        String token = registerUser("idem+" + UUID.randomUUID() + "@example.com");
 
-        String balanceKey = "idem-balance-" + UUID.randomUUID();
-        JsonNode firstBalance = addBalance(token, "USD", new BigDecimal("5000"), balanceKey);
-        JsonNode secondBalance = addBalance(token, "USD", new BigDecimal("5000"), balanceKey);
-        assertEquals(
-                0,
-                new BigDecimal(firstBalance.path("balance").asText())
-                        .compareTo(new BigDecimal(secondBalance.path("balance").asText()))
-        );
-
-        String orderKey = "idem-order-" + UUID.randomUUID();
-        JsonNode firstOrder = createOrder(
-                token, "BUY", "BTC", "USD",
-                new BigDecimal("0.1"), new BigDecimal("30000"), orderKey
-        );
-        JsonNode secondOrder = createOrder(
-                token, "BUY", "BTC", "USD",
-                new BigDecimal("0.1"), new BigDecimal("30000"), orderKey
-        );
-        assertEquals(firstOrder.path("id").asLong(), secondOrder.path("id").asLong());
-    }
 
     private String registerUser(String email) throws Exception {
         RegisterUserRequest request = RegisterUserRequest.builder()
@@ -116,10 +90,6 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
     }
 
     private JsonNode addBalance(String token, String currency, BigDecimal amount) throws Exception {
-        return addBalance(token, currency, amount, null);
-    }
-
-    private JsonNode addBalance(String token, String currency, BigDecimal amount, String idempotencyKey) throws Exception {
         AddBalanceRequest request = AddBalanceRequest.builder()
                 .currency(currency)
                 .amount(amount)
@@ -129,10 +99,6 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request));
-
-        if (idempotencyKey != null) {
-            builder.header("Idempotency-Key", idempotencyKey);
-        }
 
         MvcResult result = mockMvc.perform(builder)
                 .andExpect(status().isOk())
@@ -145,8 +111,7 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
                                  String baseCurrency,
                                  String quoteCurrency,
                                  BigDecimal amount,
-                                 BigDecimal price,
-                                 String idempotencyKey) throws Exception {
+                                 BigDecimal price) throws Exception {
         CreateOrderRequest request = CreateOrderRequest.builder()
                 .orderType(orderType)
                 .baseCurrency(baseCurrency)
@@ -159,10 +124,6 @@ class OrderExecutionAndIdempotencyTest extends IntegrationTestBase {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request));
-
-        if (idempotencyKey != null) {
-            builder.header("Idempotency-Key", idempotencyKey);
-        }
 
         MvcResult result = mockMvc.perform(builder)
                 .andExpect(status().isCreated())

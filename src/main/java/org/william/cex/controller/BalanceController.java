@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.william.cex.dto.request.AddBalanceRequest;
 import org.william.cex.dto.response.BalanceResponse;
-import org.william.cex.service.IdempotencyService;
 import org.william.cex.entity.UserWallet;
 import org.william.cex.service.UserService;
 import org.william.cex.infrastructure.security.AuthenticationUtils;
@@ -25,17 +24,8 @@ public class BalanceController {
 
     @PostMapping("/add")
     public ResponseEntity<BalanceResponse> addBalance(
-            @Valid @RequestBody AddBalanceRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @Valid @RequestBody AddBalanceRequest request) {
         Long userId = authenticationUtils.getAuthenticatedUserId();
-
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            var cachedResponse = idempotencyService.getCachedResponse(idempotencyKey, userId, BalanceResponse.class);
-            if (cachedResponse.isPresent()) {
-                var cached = cachedResponse.get();
-                return ResponseEntity.status(cached.statusCode()).body(cached.body());
-            }
-        }
 
         log.info("User {} is adding {} {} to their balance", userId, request.getAmount(), request.getCurrency());
 
@@ -50,14 +40,10 @@ public class BalanceController {
                 .availableBalance(wallet.getAvailableBalance())
                 .build();
 
-        idempotencyService.storeResponse(idempotencyKey, userId, 200, response);
         log.info("Balance added successfully for user {}: {} {} now has balance of {}",
                 userId, request.getAmount(), request.getCurrency(), wallet.getBalance());
         return ResponseEntity.ok(response);
     }
-
-    @Autowired
-    private IdempotencyService idempotencyService;
 
     @GetMapping("/{currency}")
     public ResponseEntity<BalanceResponse> getBalance(

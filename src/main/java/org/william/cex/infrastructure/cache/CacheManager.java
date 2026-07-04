@@ -17,7 +17,6 @@ public class CacheManager {
 
     private static final String BALANCE_KEY = "balance:%d:%s";
     private static final String ORDER_KEY = "order:%d";
-    private static final String IDEMPOTENCY_KEY = "idempotency:%s";
 
     public void setBalance(Long userId, String currency, Object balance, long ttlMinutes) {
         String key = String.format(BALANCE_KEY, userId, currency);
@@ -67,20 +66,6 @@ public class CacheManager {
         redisTemplate.delete(key);
     }
 
-    public void setIdempotencyKey(String idempotencyKey, Object response, long ttlHours) {
-        String key = String.format(IDEMPOTENCY_KEY, idempotencyKey);
-        redisTemplate.opsForValue().set(key, response, ttlHours, TimeUnit.HOURS);
-    }
 
-    public Object getIdempotencyKey(String idempotencyKey) {
-        String key = String.format(IDEMPOTENCY_KEY, idempotencyKey);
-        try {
-            return redisTemplate.opsForValue().get(key);
-        } catch (SerializationException e) {
-            log.warn("Failed to deserialize cached idempotency key {}. Evicting corrupt entry.", key);
-            redisTemplate.delete(key);
-            return null;
-        }
-    }
 }
 

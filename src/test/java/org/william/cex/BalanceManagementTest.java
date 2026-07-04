@@ -113,41 +113,7 @@ class BalanceManagementTest extends IntegrationTestBase {
         log.info("Add balance USD response: {}", responseBody);
     }
 
-    @Test
-    @Order(3)
-    @DisplayName("Test 3: Add Balance - Idempotency Check")
-    void testAddBalanceIdempotency() throws Exception {
-        log.info("=== TEST 3: Add Balance Idempotency ===");
 
-        AddBalanceRequest request = AddBalanceRequest.builder()
-                .currency("ETH")
-                .amount(new BigDecimal("5.0"))
-                .build();
-
-        // First request
-        MvcResult result1 = mockMvc.perform(post("/v1/balance/add")
-                .header("Authorization", "Bearer " + userToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("ETH"))
-                .andExpect(jsonPath("$.balance").value(5.0))
-                .andReturn();
-
-        log.info("First add balance ETH: {}", result1.getResponse().getContentAsString());
-
-        // Second request (should add more)
-        MvcResult result2 = mockMvc.perform(post("/v1/balance/add")
-                .header("Authorization", "Bearer " + userToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("ETH"))
-                .andExpect(jsonPath("$.balance").value(10.0))
-                .andReturn();
-
-        log.info("Second add balance ETH: {}", result2.getResponse().getContentAsString());
-    }
 
     @Test
     @Order(4)
