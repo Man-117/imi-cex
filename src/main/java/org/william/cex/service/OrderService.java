@@ -23,6 +23,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import jakarta.annotation.PostConstruct;
+
+import com.orderbook.OrderBook;
+import com.orderbook.entity.LimitOrder;
+import com.orderbook.entity.GeneralOrderInfo;
+import com.orderbook.entity.Side;
 
 @Service
 @Slf4j
@@ -36,9 +45,6 @@ public class OrderService {
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private FeeService feeService;
 
     @Autowired
     private TradeRepository tradeRepository;
@@ -59,6 +65,51 @@ public class OrderService {
 
     @Value("${cex.risk.max-daily-notional:2000000}")
     private BigDecimal maxDailyNotional;
+
+    private final Map<String, OrderBook> orderBooks = new ConcurrentHashMap<>();
+
+    private OrderBook getOrderBook(String pair) {
+        return orderBooks.computeIfAbsent(pair, k -> OrderBook.builder(k).build());
+    }
+
+    @PostConstruct
+    public void initOrderBooks() {
+        List<Order> openOrders = new java.util.ArrayList<>();
+        openOrders.addAll(orderRepository.findByStatus(Order.OrderStatus.PENDING));
+        openOrders.addAll(orderRepository.findByStatus(Order.OrderStatus.PARTIALLY_FILLED));
+        
+        openOrders.sort(java.util.Comparator.comparing(Order::getCreatedAt));
+        
+        for (Order order : openOrders) {
+            String pair = order.getBaseCurrency() + "/" + order.getQuoteCurrency();
+            OrderBook ob = getOrderBook(pair);
+            ob.addOrder(toLimitOrder(order));
+        }
+    }
+
+    private long toLong(BigDecimal value) {
+        return value.multiply(BigDecimal.valueOf(100000000)).longValue();
+    }
+
+    private BigDecimal toBigDecimal(long value) {
+        return BigDecimal.valueOf(value).divide(BigDecimal.valueOf(100000000), 8, RoundingMode.HALF_UP);
+    }
+
+    private LimitOrder toLimitOrder(Order order) {
+        UUID orderUuid = new UUID(0L, order.getId());
+        UUID userUuid = new UUID(0L, order.getUserId());
+        Side side = order.getOrderType() == Order.OrderType.BUY ? Side.BUY : Side.SELL;
+        
+        GeneralOrderInfo info = new GeneralOrderInfo(
+                orderUuid,
+                com.orderbook.entity.OrderType.LIMIT,
+                side,
+                toLong(order.getRemainingAmount()),
+                userUuid,
+                order.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        );
+        return new LimitOrder(info, toLong(order.getPrice()));
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Long userId, Order.OrderType orderType, String baseCurrency,
@@ -142,6 +193,11 @@ public class OrderService {
 
         userService.unlockBalance(order.getUserId(), unlockCurrency, unlockAmount);
 
+        // Cancel in OrderBook
+        String pair = order.getBaseCurrency() + "/" + order.getQuoteCurrency();
+        OrderBook orderBook = getOrderBook(pair);
+        orderBook.cancelOrder(toLimitOrder(order));
+
         order.setStatus(Order.OrderStatus.CANCELLED);
         orderRepository.save(order);
 
@@ -152,60 +208,32 @@ public class OrderService {
         log.info("Order cancelled: {}", orderId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void fillOrder(Long orderId, BigDecimal filledAmount) {
-        Order order = getOrder(orderId);
-
-        if (order.getStatus() == Order.OrderStatus.CANCELLED) {
-            throw new InvalidOrderException("Cannot fill cancelled order");
-        }
-
-        applyOrderFill(order, scale(filledAmount), "Manual fill");
-
-        orderRepository.save(order);
-        cacheManager.clearOrder(orderId);
-        log.info("Order filled: {} amount: {}", orderId, filledAmount);
-    }
 
     private void tryMatchOrder(Order takerOrder) {
         if (takerOrder.getStatus() == Order.OrderStatus.CANCELLED || takerOrder.getStatus() == Order.OrderStatus.FILLED) {
             return;
         }
 
-        Pageable pageable = PageRequest.of(0, MAX_MATCH_CANDIDATES);
-        List<Order> candidates = takerOrder.getOrderType() == Order.OrderType.BUY
-                ? orderRepository.findMatchableSellOrders(
-                        takerOrder.getBaseCurrency(),
-                        takerOrder.getQuoteCurrency(),
-                        takerOrder.getPrice(),
-                        takerOrder.getId(),
-                        pageable)
-                : orderRepository.findMatchableBuyOrders(
-                        takerOrder.getBaseCurrency(),
-                        takerOrder.getQuoteCurrency(),
-                        takerOrder.getPrice(),
-                        takerOrder.getId(),
-                        pageable);
+        String pair = takerOrder.getBaseCurrency() + "/" + takerOrder.getQuoteCurrency();
+        OrderBook orderBook = getOrderBook(pair);
+        orderBook.addOrder(toLimitOrder(takerOrder));
 
-        for (Order makerOrder : candidates) {
-            if (takerOrder.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                break;
-            }
-            if (makerOrder.getStatus() == Order.OrderStatus.CANCELLED || makerOrder.getStatus() == Order.OrderStatus.FILLED) {
-                continue;
-            }
-            if (makerOrder.getUserId().equals(takerOrder.getUserId())) {
+        com.orderbook.entity.Trade trade;
+        while ((trade = orderBook.consumeResult()) != null) {
+            Long takerId = trade.takerId().getLeastSignificantBits();
+            Long makerId = trade.makerId().getLeastSignificantBits();
+
+            Order taker = getOrder(takerId);
+            Order maker = getOrder(makerId);
+
+            if (taker.getUserId().equals(maker.getUserId())) {
                 tradingMetricsService.incrementSelfMatchSkipped();
-                continue;
             }
 
-            BigDecimal tradeAmount = takerOrder.getRemainingAmount().min(makerOrder.getRemainingAmount());
-            if (tradeAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
+            BigDecimal tradeAmount = toBigDecimal(trade.quantity());
+            BigDecimal executionPrice = toBigDecimal(trade.price());
 
-            BigDecimal executionPrice = makerOrder.getPrice();
-            executeTrade(takerOrder, makerOrder, tradeAmount, executionPrice);
+            executeTrade(taker, maker, tradeAmount, executionPrice);
         }
     }
 
@@ -218,8 +246,8 @@ public class OrderService {
 
         BigDecimal tradeNotional = scale(normalizedAmount.multiply(normalizedExecutionPrice));
         String pair = buyOrder.getBaseCurrency() + "/" + buyOrder.getQuoteCurrency();
-        BigDecimal buyFee = feeService.calculateTradingFee(pair, tradeNotional);
-        BigDecimal sellFee = feeService.calculateTradingFee(pair, tradeNotional);
+        BigDecimal buyFee = BigDecimal.ZERO;
+        BigDecimal sellFee = BigDecimal.ZERO;
 
         userService.settleBuyTrade(
                 buyOrder.getUserId(),

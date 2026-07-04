@@ -10,7 +10,6 @@ import org.william.cex.dto.request.AdminRegisterRequest;
 import org.william.cex.dto.request.LoginRequest;
 import org.william.cex.dto.response.AuthResponse;
 import org.william.cex.service.AdminService;
-import org.william.cex.service.FeeService;
 import org.william.cex.entity.User;
 import org.william.cex.infrastructure.security.AuthenticationUtils;
 import org.william.cex.infrastructure.security.JwtTokenProvider;
@@ -19,9 +18,6 @@ import org.william.cex.infrastructure.security.JwtTokenProvider;
 @RequestMapping("/v1/admin")
 @Slf4j
 public class AdminController {
-
-    @Autowired
-    private FeeService feeService;
 
     @Autowired
     private AuthenticationUtils authenticationUtils;

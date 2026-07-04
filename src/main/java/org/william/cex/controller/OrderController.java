@@ -34,7 +34,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody CreateOrderRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @RequestHeader(value = "Idempotency-Key", required = false)  String idempotencyKey) {
          Long userId = authenticationUtils.getAuthenticatedUserId();
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {

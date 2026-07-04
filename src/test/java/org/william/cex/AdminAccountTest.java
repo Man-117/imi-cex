@@ -12,7 +12,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.william.cex.dto.request.AdminRegisterRequest;
 import org.william.cex.dto.request.LoginRequest;
-import org.william.cex.dto.request.UpdateFeeRateRequest;
 import org.william.cex.dto.response.AuthResponse;
 import org.william.cex.repository.UserRepository;
 import org.william.cex.support.IntegrationTestBase;
@@ -192,48 +191,7 @@ class AdminAccountTest extends IntegrationTestBase {
         log.info("Non-existent email correctly rejected");
     }
 
-    @Test
-    @Order(7)
-    @DisplayName("Test 7: Update Fee Rate - With Authentication")
-    void testUpdateFeeRateWithAuth() throws Exception {
-        log.info("=== TEST 9: Update Fee Rate with Authentication ===");
 
-        UpdateFeeRateRequest request = UpdateFeeRateRequest.builder()
-                .currencyPair("BTC/USD")
-                .feePercentage(new BigDecimal("0.25"))
-                .build();
-
-        MvcResult result = mockMvc.perform(post("/v1/fees").header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.currencyPair").value("BTC/USD"))
-                .andExpect(jsonPath("$.feePercentage").value(0.25))
-                .andReturn();
-
-        String responseBody = result.getResponse()
-                .getContentAsString();
-        log.info("Fee rate update response: {}", responseBody);
-    }
-
-    @Test
-    @Order(8)
-    @DisplayName("Test 8: Update Fee Rate - Without Authentication")
-    void testUpdateFeeRateWithoutAuth() throws Exception {
-        log.info("=== TEST 10: Update Fee Rate without Authentication ===");
-
-        UpdateFeeRateRequest request = UpdateFeeRateRequest.builder()
-                .currencyPair("ETH/USD")
-                .feePercentage(new BigDecimal("0.30"))
-                .build();
-
-        mockMvc.perform(post("/v1/fees").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-
-        log.info("Unauthorized fee update correctly rejected");
-    }
 
     @Test
     @Order(10)

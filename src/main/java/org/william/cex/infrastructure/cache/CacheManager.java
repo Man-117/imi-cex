@@ -17,7 +17,6 @@ public class CacheManager {
 
     private static final String BALANCE_KEY = "balance:%d:%s";
     private static final String ORDER_KEY = "order:%d";
-    private static final String FEE_RATE_KEY = "fee-rate:%s";
     private static final String IDEMPOTENCY_KEY = "idempotency:%s";
 
     public void setBalance(Long userId, String currency, Object balance, long ttlMinutes) {
@@ -66,27 +65,6 @@ public class CacheManager {
     public void clearOrder(Long orderId) {
         String key = String.format(ORDER_KEY, orderId);
         redisTemplate.delete(key);
-    }
-
-    public void setFeeRate(String currencyPair, Object feeRate, long ttlMinutes) {
-        String key = String.format(FEE_RATE_KEY, currencyPair);
-        redisTemplate.opsForValue().set(key, feeRate, ttlMinutes, TimeUnit.MINUTES);
-    }
-
-    public Object getFeeRate(String currencyPair) {
-        String key = String.format(FEE_RATE_KEY, currencyPair);
-        try {
-            return redisTemplate.opsForValue().get(key);
-        } catch (SerializationException e) {
-            log.warn("Failed to deserialize cached fee key {}. Evicting corrupt entry.", key);
-            redisTemplate.delete(key);
-            return null;
-        }
-    }
-
-    public void clearFeeRates(String currencyPair) {
-        String key = String.format(FEE_RATE_KEY, currencyPair);
-        redisTemplate.delete(redisTemplate.keys(key));
     }
 
     public void setIdempotencyKey(String idempotencyKey, Object response, long ttlHours) {
